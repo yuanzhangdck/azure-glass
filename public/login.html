@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Access</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%230078D4' d='M5.6 21h12.5L12 3.8 5.6 21zm.9-2.5l3.8-10.5L13.7 18H6.5z'/%3E%3C/svg%3E">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background: radial-gradient(circle at top left, #1e293b, #0f172a);
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            color: #f1f5f9; 
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+        .glass-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #f8fafc;
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            background: rgba(0, 0, 0, 0.4);
+            border-color: rgba(59, 130, 246, 0.5);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="glass-panel w-full max-w-md rounded-3xl p-10 shadow-2xl border-t border-white/10">
+        <div class="text-center mb-10">
+            <div class="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/10">
+                <svg class="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11.9687 4.09509L5.3418 21.5H17.9026L11.9687 4.09509Z" fill="#3b82f6"/>
+                    <path d="M2.5 21.5H8.75L12.0625 12.6366L15.375 21.5H21.5L12.0625 3.5L2.5 21.5Z" fill="#60a5fa" fill-opacity="0.5"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Welcome Back</h1>
+            <p class="text-slate-400 text-sm mt-2">Azure Cloud Management Console</p>
+        </div>
+
+        <form id="login-form" class="space-y-6">
+            <div>
+                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 block ml-1">Access Key</label>
+                <input type="password" id="password" class="glass-input w-full rounded-xl px-4 py-3 text-sm" placeholder="Enter system password" autofocus>
+            </div>
+
+            <button type="submit" class="btn-primary w-full rounded-xl py-3.5 text-sm font-bold text-white tracking-wide shadow-lg">
+                Authenticate
+            </button>
+        </form>
+        
+        <p id="error-msg" class="text-red-400 text-xs text-center mt-6 h-4 opacity-0 transition-opacity"></p>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const btn = document.querySelector('button');
+            const msg = document.getElementById('error-msg');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-70');
+            btn.innerText = 'Verifying...';
+            msg.classList.add('opacity-0');
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('bg-green-500');
+                    btn.innerText = 'Access Granted';
+                    setTimeout(() => window.location.href = '/', 500);
+                } else {
+                    msg.innerText = 'Incorrect password';
+                    msg.classList.remove('opacity-0');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-70');
+                    btn.innerText = 'Authenticate';
+                }
+            } catch (e) {
+                msg.innerText = 'Connection error';
+                msg.classList.remove('opacity-0');
+                btn.disabled = false;
+                btn.innerText = 'Authenticate';
+            }
+        });
+    </script>
+</body>
+</html>
