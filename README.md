@@ -29,6 +29,21 @@ bash <(curl -sL https://raw.githubusercontent.com/yuanzhangdck/azure-glass/main/
 3. Installs dependencies and starts the server on port **3000**.
 4. Configures **PM2** to auto-start on boot.
 
+### 🐳 Docker Install (Alternative)
+
+If you prefer containers, pull from GHCR:
+
+```bash
+docker run -d \
+  --name azure-glass \
+  --restart always \
+  -p 3000:3000 \
+  -v $(pwd)/data:/app/data \
+  ghcr.io/yuanzhangdck/azure-glass:latest
+```
+
+*(If private repo, login first)*
+
 ### 🔑 Default Credentials
 
 - **URL**: `http://YOUR_IP:3000`
@@ -51,6 +66,19 @@ bash <(curl -sL https://raw.githubusercontent.com/yuanzhangdck/azure-glass/main/
 2. 拉取代码到 `~/azure-glass` 目录。
 3. 安装依赖并启动服务（默认端口 **3000**）。
 4. 配置开机自启和崩溃重启保护。
+
+### 🐳 Docker 安装 (可选)
+
+```bash
+docker run -d \
+  --name azure-glass \
+  --restart always \
+  -p 3000:3000 \
+  -v $(pwd)/data:/app/data \
+  ghcr.io/yuanzhangdck/azure-glass:latest
+```
+
+*(如果仓库是私有的，需要先 docker login)*
 
 ### 🔑 默认信息
 
