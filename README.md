@@ -42,8 +42,6 @@ docker run -d \
   ghcr.io/yuanzhangdck/azure-glass:latest
 ```
 
-*(If private repo, login first)*
-
 ### 🔑 Default Credentials
 
 - **URL**: `http://YOUR_IP:3000`
@@ -77,8 +75,6 @@ docker run -d \
   -v $(pwd)/data:/app/data \
   ghcr.io/yuanzhangdck/azure-glass:latest
 ```
-
-*(如果仓库是私有的，需要先 docker login)*
 
 ### 🔑 默认信息
 
