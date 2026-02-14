@@ -6,11 +6,14 @@ const { ComputeManagementClient } = require('@azure/arm-compute');
 const { NetworkManagementClient } = require('@azure/arm-network');
 const { ResourceManagementClient } = require('@azure/arm-resources');
 const { SubscriptionClient } = require('@azure/arm-subscriptions');
+const { CognitiveServicesManagementClient } = require('@azure/arm-cognitiveservices');
+const { SocksProxyAgent } = require('socks-proxy-agent');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 
 const app = express();
-const port = process.env.PORT || 3000; // Honor platform-provided port if present
+const port = process.env.PORT || 3000;
 
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(cookieParser());
@@ -19,7 +22,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // --- Config & Data ---
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_PATH = path.join(DATA_DIR, 'config.json');
-const KEY_PATH = path.join(DATA_DIR, 'azure-key.json');
+const ACCOUNTS_PATH = path.join(DATA_DIR, 'accounts.json');
 const NUKE_STATUS_PATH = path.join(DATA_DIR, 'nuke-status.json');
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
@@ -36,15 +39,22 @@ function saveConfig(newConfig) {
     fs.writeFileSync(CONFIG_PATH, JSON.stringify({ ...current, ...newConfig }, null, 2));
 }
 
+// --- Multi-Account Management ---
+function getAccounts() {
+    if (!fs.existsSync(ACCOUNTS_PATH)) {
+        fs.writeFileSync(ACCOUNTS_PATH, JSON.stringify([]));
+    }
+    return JSON.parse(fs.readFileSync(ACCOUNTS_PATH, 'utf8'));
+}
+
+function saveAccounts(accounts) {
+    fs.writeFileSync(ACCOUNTS_PATH, JSON.stringify(accounts, null, 2));
+}
+
+// --- Nuke ---
 function readNukeStatus() {
-    if (!fs.existsSync(NUKE_STATUS_PATH)) {
-        return { running: false };
-    }
-    try {
-        return JSON.parse(fs.readFileSync(NUKE_STATUS_PATH, 'utf8'));
-    } catch {
-        return { running: false };
-    }
+    if (!fs.existsSync(NUKE_STATUS_PATH)) return { running: false };
+    try { return JSON.parse(fs.readFileSync(NUKE_STATUS_PATH, 'utf8')); } catch { return { running: false }; }
 }
 
 function writeNukeStatus(status) {
@@ -55,14 +65,9 @@ let nukeInProgress = false;
 async function runNuke(resources) {
     if (nukeInProgress) return;
     nukeInProgress = true;
-
     const startedAt = new Date().toISOString();
-    let deleted = 0;
-    let lastRg = null;
-    let error = null;
-
+    let deleted = 0, lastRg = null, error = null;
     writeNukeStatus({ running: true, startedAt, deleted, lastRg, error });
-
     try {
         for await (const rg of resources.resourceGroups.list()) {
             lastRg = rg.name;
@@ -77,56 +82,91 @@ async function runNuke(resources) {
         console.error('[NUKE] Error:', e);
     } finally {
         nukeInProgress = false;
-        writeNukeStatus({
-            running: false,
-            startedAt,
-            finishedAt: new Date().toISOString(),
-            deleted,
-            lastRg,
-            error
-        });
+        writeNukeStatus({ running: false, startedAt, finishedAt: new Date().toISOString(), deleted, lastRg, error });
     }
 }
 
-// --- Azure Clients ---
-let _clients = null;
+// --- Azure Clients (per account) ---
+const _clientsCache = {};
 
-function getClients() {
-    if (_clients && _clients.subscriptionId) return _clients;
-    if (!fs.existsSync(KEY_PATH)) return null;
+function buildProxyAgent(socks5Url) {
+    if (!socks5Url) return undefined;
+    const agent = new SocksProxyAgent(socks5Url);
+    return {
+        httpAgent: agent,
+        httpsAgent: agent,
+        proxyOptions: {
+            customAgent: agent
+        }
+    };
+}
+
+function getClientsForAccount(account) {
+    if (!account || !account.credentials) return null;
+    const cacheKey = account.id;
+
+    // Invalidate cache if socks5 changed
+    if (_clientsCache[cacheKey] && _clientsCache[cacheKey]._socks5 !== (account.socks5 || '')) {
+        delete _clientsCache[cacheKey];
+    }
+
+    if (_clientsCache[cacheKey]) return _clientsCache[cacheKey];
 
     try {
-        const key = JSON.parse(fs.readFileSync(KEY_PATH, 'utf8'));
-        // Standard SP structure
-        const credential = new ClientSecretCredential(key.tenantId, key.clientId, key.clientSecret);
+        const key = account.credentials;
+        const proxyParts = buildProxyAgent(account.socks5);
+
+        const credentialOptions = {};
+        const clientOptions = {};
+
+        if (proxyParts) {
+            const proxyPolicy = {
+                name: 'socksProxyPolicy',
+                sendRequest: (request, next) => {
+                    request.agent = proxyParts.httpAgent;
+                    return next(request);
+                }
+            };
+            clientOptions.additionalPolicies = [{ policy: proxyPolicy, position: 'perCall' }];
+            credentialOptions.additionalPolicies = [{ policy: proxyPolicy, position: 'perCall' }];
+        }
+
+        const credential = new ClientSecretCredential(key.tenantId, key.clientId, key.clientSecret, credentialOptions);
         const subId = key.subscriptionId;
 
-        _clients = {
+        // Clear empty proxy env vars that confuse Azure SDK
+        for (const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy']) {
+            if (process.env[k] === '') delete process.env[k];
+        }
+
+        _clientsCache[cacheKey] = {
+            _socks5: account.socks5 || '',
             subscriptionId: subId,
-            compute: new ComputeManagementClient(credential, subId),
-            network: new NetworkManagementClient(credential, subId),
-            resources: new ResourceManagementClient(credential, subId),
-            subscriptions: new SubscriptionClient(credential),
-            credential // needed for some specialized clients
+            compute: new ComputeManagementClient(credential, subId, clientOptions),
+            network: new NetworkManagementClient(credential, subId, clientOptions),
+            resources: new ResourceManagementClient(credential, subId, clientOptions),
+            subscriptions: new SubscriptionClient(credential, clientOptions),
+            cognitive: new CognitiveServicesManagementClient(credential, subId, clientOptions),
+            credential
         };
-        return _clients;
+        return _clientsCache[cacheKey];
     } catch (e) {
-        console.error('Failed to load Azure clients:', e.message);
+        console.error('Failed to load Azure clients for account:', account.name, e.message);
         return null;
     }
 }
 
-function resetClients() { _clients = null; }
+function invalidateClientCache(accountId) {
+    delete _clientsCache[accountId];
+}
 
 // --- Middleware ---
 const AUTH_COOKIE_NAME = 'azure_auth';
 
-// Login
 app.post('/api/login', (req, res) => {
     const { password } = req.body;
     const config = getConfig();
     if (password === config.password) {
-        // Set Cookie for 30 days
         res.cookie(AUTH_COOKIE_NAME, 'valid', { httpOnly: false, maxAge: 30 * 24 * 60 * 60 * 1000 });
         res.json({ success: true });
     } else {
@@ -134,40 +174,144 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Auth Check
 app.use('/api', (req, res, next) => {
     if (req.path === '/login') return next();
     if (req.cookies[AUTH_COOKIE_NAME] === 'valid') return next();
     res.status(401).json({ error: 'Unauthorized' });
 });
 
-// Require Azure Ready
+// Resolve current account from header
+function resolveAccount(req) {
+    const accountId = req.headers['x-account-id'];
+    if (!accountId) return null;
+    const accounts = getAccounts();
+    return accounts.find(a => a.id === accountId) || null;
+}
+
 function requireAzure(req, res, next) {
-    const clients = getClients();
-    if (!clients) return res.status(503).json({ error: 'Azure Credentials not configured' });
+    const account = resolveAccount(req);
+    if (!account) return res.status(400).json({ error: 'No account selected. Please select an account first.' });
+    const clients = getClientsForAccount(account);
+    if (!clients) return res.status(503).json({ error: 'Azure Credentials invalid for this account.' });
     req.azure = clients;
+    req.account = account;
     next();
 }
 
-// --- System API ---
-app.get('/api/status', (req, res) => {
-    const clients = getClients();
-    res.json({ ready: !!clients, subscriptionId: clients ? clients.subscriptionId : null });
+// ==================== Account API ====================
+
+app.get('/api/accounts', (req, res) => {
+    const accounts = getAccounts();
+    // Don't expose credentials to frontend
+    const safe = accounts.map(a => ({
+        id: a.id,
+        name: a.name,
+        remark: a.remark || '',
+        socks5: a.socks5 || '',
+        subscriptionId: a.credentials?.subscriptionId || '',
+        createdAt: a.createdAt
+    }));
+    res.json({ success: true, accounts: safe });
 });
 
-app.post('/api/setup/key', (req, res) => {
+app.get('/api/accounts/:id', (req, res) => {
+    const accounts = getAccounts();
+    const a = accounts.find(x => x.id === req.params.id);
+    if (!a) return res.status(404).json({ error: 'Account not found' });
+    res.json({ success: true, account: { id: a.id, name: a.name, remark: a.remark || '', socks5: a.socks5 || '', credentials: JSON.stringify(a.credentials, null, 2) } });
+});
+
+app.post('/api/accounts', (req, res) => {
+    const { name, remark, credentials, socks5 } = req.body;
+    if (!name) return res.status(400).json({ error: 'Account name is required' });
+
+    let parsedCreds;
     try {
-        const keyObj = JSON.parse(req.body.key);
-        // Basic validation
-        if (!keyObj.clientId || !keyObj.clientSecret || !keyObj.tenantId || !keyObj.subscriptionId) {
-            throw new Error('Missing fields. Required: clientId, clientSecret, tenantId, subscriptionId');
+        parsedCreds = typeof credentials === 'string' ? JSON.parse(credentials) : credentials;
+        if (!parsedCreds.clientId || !parsedCreds.clientSecret || !parsedCreds.tenantId || !parsedCreds.subscriptionId) {
+            throw new Error('Missing fields');
         }
-        fs.writeFileSync(KEY_PATH, JSON.stringify(keyObj, null, 2));
-        resetClients();
-        res.json({ success: true });
     } catch (e) {
-        res.status(400).json({ success: false, error: e.message });
+        return res.status(400).json({ error: 'Invalid credentials: ' + e.message });
     }
+
+    const accounts = getAccounts();
+    const account = {
+        id: Date.now().toString(),
+        name,
+        remark: remark || '',
+        credentials: parsedCreds,
+        socks5: socks5 || '',
+        createdAt: new Date().toISOString()
+    };
+    accounts.push(account);
+    saveAccounts(accounts);
+    res.json({ success: true, account: { id: account.id, name: account.name, remark: account.remark, socks5: account.socks5, subscriptionId: parsedCreds.subscriptionId, createdAt: account.createdAt } });
+});
+
+app.put('/api/accounts/:id', (req, res) => {
+    const accounts = getAccounts();
+    const idx = accounts.findIndex(a => a.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Account not found' });
+
+    const { name, remark, credentials, socks5 } = req.body;
+    if (name !== undefined) accounts[idx].name = name;
+    if (remark !== undefined) accounts[idx].remark = remark;
+    if (socks5 !== undefined) accounts[idx].socks5 = socks5;
+    if (credentials) {
+        try {
+            const parsed = typeof credentials === 'string' ? JSON.parse(credentials) : credentials;
+            if (!parsed.clientId || !parsed.clientSecret || !parsed.tenantId || !parsed.subscriptionId) throw new Error('Missing fields');
+            accounts[idx].credentials = parsed;
+        } catch (e) {
+            return res.status(400).json({ error: 'Invalid credentials: ' + e.message });
+        }
+    }
+
+    invalidateClientCache(req.params.id);
+    saveAccounts(accounts);
+    res.json({ success: true });
+});
+
+app.delete('/api/accounts/:id', (req, res) => {
+    let accounts = getAccounts();
+    accounts = accounts.filter(a => a.id !== req.params.id);
+    invalidateClientCache(req.params.id);
+    saveAccounts(accounts);
+    res.json({ success: true });
+});
+
+// Test account connectivity (with socks5 proxy)
+// Test SOCKS5 proxy - returns the proxy's outbound IP
+app.post('/api/socks5/test', async (req, res) => {
+    const { socks5 } = req.body;
+    if (!socks5) return res.status(400).json({ error: 'No SOCKS5 URL provided' });
+    try {
+        const agent = new SocksProxyAgent(socks5);
+        const resp = await new Promise((resolve, reject) => {
+            https.get('https://api.ipify.org?format=json', { agent }, (r) => {
+                let data = '';
+                r.on('data', c => data += c);
+                r.on('end', () => resolve(data));
+            }).on('error', reject);
+        });
+        const { ip } = JSON.parse(resp);
+        res.json({ success: true, ip });
+    } catch (e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+
+// ==================== System API ====================
+
+app.get('/api/status', (req, res) => {
+    const account = resolveAccount(req);
+    if (!account) {
+        const accounts = getAccounts();
+        return res.json({ ready: false, subscriptionId: null, accountCount: accounts.length });
+    }
+    const clients = getClientsForAccount(account);
+    res.json({ ready: !!clients, subscriptionId: clients ? clients.subscriptionId : null });
 });
 
 app.post('/api/setup/password', (req, res) => {
@@ -177,41 +321,28 @@ app.post('/api/setup/password', (req, res) => {
     res.json({ success: true });
 });
 
-// --- Azure API Implementation ---
+// ==================== Azure Instance API ====================
 
-// 1. List VMs
 app.get('/api/instances', requireAzure, async (req, res) => {
     try {
         const { compute, network } = req.azure;
         const vms = [];
-        
-        // List all VMs in subscription (across all RGs)
         for await (const vm of compute.virtualMachines.listAll()) {
-            // Get IP info (requires fetching NIC)
-            let publicIp = 'Fetching...';
-            let publicIpV6 = 'None';
-            
+            let publicIp = 'Fetching...', publicIpV6 = 'None';
             if (vm.networkProfile && vm.networkProfile.networkInterfaces.length > 0) {
                 const nicRef = vm.networkProfile.networkInterfaces[0];
                 const rgName = nicRef.id.split('/')[4];
                 const nicName = nicRef.id.split('/').pop();
-                
                 try {
                     const nic = await network.networkInterfaces.get(rgName, nicName);
-                    
                     if (nic.ipConfigurations) {
                         for (const config of nic.ipConfigurations) {
                             if (config.publicIPAddress) {
-                                // Fetch PIP
                                 const pipId = config.publicIPAddress.id;
                                 const pipName = pipId.split('/').pop();
                                 const pipRg = pipId.split('/')[4];
                                 const pip = await network.publicIPAddresses.get(pipRg, pipName);
-                                
-                                console.log(`[DEBUG] Found PIP ${pipName}, Version: ${pip?.publicIPAddressVersion}`);
-                                
-                                // Loose check for IPv6
-                                if ((pip.publicIPAddressVersion && pip.publicIPAddressVersion.toLowerCase() === 'ipv6') || 
+                                if ((pip.publicIPAddressVersion && pip.publicIPAddressVersion.toLowerCase() === 'ipv6') ||
                                     (pip.sku && pip.sku.name === 'Standard' && pipName.includes('v6'))) {
                                     publicIpV6 = pip.ipAddress || 'Allocating...';
                                 } else if (!pip.publicIPAddressVersion || pip.publicIPAddressVersion.toLowerCase() === 'ipv4') {
@@ -220,431 +351,368 @@ app.get('/api/instances', requireAzure, async (req, res) => {
                             }
                         }
                     }
-                } catch (e) {
-                    console.warn(`Failed to fetch NIC ${nicName}`, e.message);
-                }
+                } catch (e) { console.warn(`Failed to fetch NIC ${nicName}`, e.message); }
             }
-
             vms.push({
-                name: vm.name,
-                location: vm.location,
-                // ... other fields
-                publicIp,
-                publicIpV6, // Send v6
-                privateIp: 'Hidden', // Don't need private anymore
-                provisioningState: vm.provisioningState,
-                size: vm.hardwareProfile?.vmSize,
-                resourceGroup: vm.id.split('/')[4]
+                name: vm.name, location: vm.location, publicIp, publicIpV6,
+                privateIp: 'Hidden', provisioningState: vm.provisioningState,
+                size: vm.hardwareProfile?.vmSize, resourceGroup: vm.id.split('/')[4]
             });
         }
-        
         res.json({ success: true, instances: vms });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// 2. List SKUs (Quota Radar)
-app.get('/api/skus', requireAzure, async (req, res) => {
-    try {
-        const { compute, subscriptionId } = req.azure;
-        // This is a heavy call, lists ALL SKUs for the sub. Should cache in prod.
-        const skus = [];
-        // Target specific sizes to save bandwidth processing
-        const requestedSize = (req.query.size || '').toString().trim();
-        const targetSizes = requestedSize
-            ? [requestedSize.toLowerCase()]
-            : ['standard_b1s', 'standard_b2s', 'standard_b2pts_v2', 'standard_b2ats_v2'];
-        
-        console.log('[DEBUG] Starting SKU list...');
-        let count = 0;
-        for await (const sku of compute.resourceSkus.list()) {
-            if (sku.resourceType === 'virtualMachines' && targetSizes.includes(sku.name.toLowerCase())) {
-                count++;
-                
-                const restrictedLocs = [];
-                if (sku.restrictions) {
-                    for (const r of sku.restrictions) {
-                        if (r.type === 'Location') {
-                            restrictedLocs.push(...(r.values || []));
-                        }
-                    }
-                }
-
-                skus.push({
-                    name: sku.name, 
-                    locations: sku.locations, 
-                    restrictedLocations: restrictedLocs,
-                    tier: sku.tier
-                });
-            }
-        }
-        console.log(`[DEBUG] Found ${count} SKU entries matching targets.`);
-        res.json({ success: true, skus });
-    } catch (e) {
-        console.error('[DEBUG] SKU List Error:', e);
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-// --- Helpers ---
-
-// Auto-build Infrastructure (RG, VNet, Subnet, NSG)
 async function ensureInfrastructure(azure, location, enableIPv6 = false) {
     const { resources, network } = azure;
     const rgName = 'AzurePanel-RG';
     const vnetName = `vnet-${location}`;
     const subnetName = 'default';
     const nsgName = `nsg-${location}`;
-
     try {
-        // 1. Ensure Resource Group
         if (!(await resources.resourceGroups.checkExistence(rgName)).body) {
-            console.log(`Creating RG: ${rgName}`);
             await resources.resourceGroups.createOrUpdate(rgName, { location });
         }
-
-        // 2. Ensure NSG (Firewall)
-        console.log(`Ensuring NSG: ${nsgName}`);
         const nsgParams = {
             location,
             securityRules: [
-                {
-                    name: 'Allow-All-Inbound',
-                    protocol: '*',
-                    sourcePortRange: '*',
-                    destinationPortRange: '*',
-                    sourceAddressPrefix: '*',
-                    destinationAddressPrefix: '*',
-                    access: 'Allow',
-                    priority: 1000,
-                    direction: 'Inbound'
-                },
-                {
-                    name: 'Allow-All-Inbound-v6',
-                    protocol: '*',
-                    sourcePortRange: '*',
-                    destinationPortRange: '*',
-                    sourceAddressPrefix: '*', // In v6 rules this means any
-                    destinationAddressPrefix: '*',
-                    access: 'Allow',
-                    priority: 1001,
-                    direction: 'Inbound'
-                }
+                { name: 'Allow-All-Inbound', protocol: '*', sourcePortRange: '*', destinationPortRange: '*', sourceAddressPrefix: '*', destinationAddressPrefix: '*', access: 'Allow', priority: 1000, direction: 'Inbound' },
+                { name: 'Allow-All-Inbound-v6', protocol: '*', sourcePortRange: '*', destinationPortRange: '*', sourceAddressPrefix: '*', destinationAddressPrefix: '*', access: 'Allow', priority: 1001, direction: 'Inbound' }
             ]
         };
         const nsgPoller = await network.networkSecurityGroups.beginCreateOrUpdate(rgName, nsgName, nsgParams);
         const nsg = await nsgPoller.pollUntilDone();
-
-        // 3. Ensure VNet & Subnet
-        // We need to fetch existing VNet to see if we need to update for IPv6
         let vnetParams = {
             location,
             addressSpace: { addressPrefixes: ['10.0.0.0/16'] },
-            subnets: [{
-                name: subnetName,
-                addressPrefix: '10.0.0.0/24',
-                networkSecurityGroup: { id: nsg.id }
-            }]
+            subnets: [{ name: subnetName, addressPrefix: '10.0.0.0/24', networkSecurityGroup: { id: nsg.id } }]
         };
-
         if (enableIPv6) {
-            // Add IPv6 range
             vnetParams.addressSpace.addressPrefixes.push('ace:cab:deca::/48');
             vnetParams.subnets[0].addressPrefixes = ['10.0.0.0/24', 'ace:cab:deca::/64'];
-            delete vnetParams.subnets[0].addressPrefix; // Use addressPrefixes for dual stack
+            delete vnetParams.subnets[0].addressPrefix;
         }
-
-        console.log(`Ensuring VNet: ${vnetName} (IPv6: ${enableIPv6})`);
         const vnetPoller = await network.virtualNetworks.beginCreateOrUpdate(rgName, vnetName, vnetParams);
         await vnetPoller.pollUntilDone();
-
-        return {
-            rgName,
-            subnetId: `/subscriptions/${azure.subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.Network/virtualNetworks/${vnetName}/subnets/${subnetName}`,
-            location
-        };
-
-    } catch (e) {
-        console.error('Infrastructure Error:', e);
-        throw new Error(`Infra failed: ${e.message}`);
-    }
+        return { rgName, subnetId: `/subscriptions/${azure.subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.Network/virtualNetworks/${vnetName}/subnets/${subnetName}`, location };
+    } catch (e) { throw new Error(`Infra failed: ${e.message}`); }
 }
 
-// Create Instance
 app.post('/api/instances/create', requireAzure, async (req, res) => {
     const { name, location, size, image, username, password, spot, ipv6 } = req.body;
     const { compute, network } = req.azure;
-
     if (!name || !location) return res.status(400).json({ error: 'Missing name/location' });
-
     try {
-        // 1. Prepare Infrastructure
         const infra = await ensureInfrastructure(req.azure, location, ipv6);
-        
-        // 2. Create Public IP (v4)
         const pipName = `${name}-pip`;
-        const pipPoller = await network.publicIPAddresses.beginCreateOrUpdate(infra.rgName, pipName, {
-            location,
-            publicIPAllocationMethod: 'Static',
-            sku: { name: 'Standard' }
-        });
+        const pipPoller = await network.publicIPAddresses.beginCreateOrUpdate(infra.rgName, pipName, { location, publicIPAllocationMethod: 'Static', sku: { name: 'Standard' } });
         const pip = await pipPoller.pollUntilDone();
-
-        // 2b. Create Public IP (v6) if requested
         let pipV6 = null;
         if (ipv6) {
-            const pipV6Name = `${name}-pip-v6`;
-            const pipV6Poller = await network.publicIPAddresses.beginCreateOrUpdate(infra.rgName, pipV6Name, {
-                location,
-                publicIPAllocationMethod: 'Static',
-                publicIPAddressVersion: 'IPv6',
-                sku: { name: 'Standard' }
-            });
+            const pipV6Poller = await network.publicIPAddresses.beginCreateOrUpdate(infra.rgName, `${name}-pip-v6`, { location, publicIPAllocationMethod: 'Static', publicIPAddressVersion: 'IPv6', sku: { name: 'Standard' } });
             pipV6 = await pipV6Poller.pollUntilDone();
         }
-
-        // 3. Create NIC
         const nicName = `${name}-nic`;
-        const nicParams = {
-            location,
-            ipConfigurations: [{
-                name: 'ipconfig1',
-                subnet: { id: infra.subnetId },
-                publicIPAddress: { id: pip.id },
-                privateIPAllocationMethod: 'Dynamic',
-                primary: true
-            }]
-        };
-
+        const nicParams = { location, ipConfigurations: [{ name: 'ipconfig1', subnet: { id: infra.subnetId }, publicIPAddress: { id: pip.id }, privateIPAllocationMethod: 'Dynamic', primary: true }] };
         if (pipV6) {
-            nicParams.ipConfigurations.push({
-                name: 'ipconfig-v6',
-                subnet: { id: infra.subnetId },
-                publicIPAddress: { id: pipV6.id },
-                privateIPAddressVersion: 'IPv6',
-                privateIPAllocationMethod: 'Dynamic'
-            });
+            nicParams.ipConfigurations.push({ name: 'ipconfig-v6', subnet: { id: infra.subnetId }, publicIPAddress: { id: pipV6.id }, privateIPAddressVersion: 'IPv6', privateIPAllocationMethod: 'Dynamic' });
         }
-
         const nicPoller = await network.networkInterfaces.beginCreateOrUpdate(infra.rgName, nicName, nicParams);
         const nic = await nicPoller.pollUntilDone();
-
-        // 4. Create VM
-        // Default to Ubuntu 20 if no image provided
-        const defaultImage = {
-            publisher: 'Canonical',
-            offer: '0001-com-ubuntu-server-focal',
-            sku: '20_04-lts-gen2',
-            version: 'latest'
-        };
-
+        const defaultImage = { publisher: 'Canonical', offer: '0001-com-ubuntu-server-focal', sku: '20_04-lts-gen2', version: 'latest' };
         const vmParams = {
             location,
             hardwareProfile: { vmSize: size || 'Standard_B1s' },
-            storageProfile: {
-                imageReference: image || defaultImage,
-                osDisk: {
-                    createOption: 'FromImage',
-                    managedDisk: { storageAccountType: 'StandardSSD_LRS' },
-                    diskSizeGB: 64, // Explicitly set to 64GB
-                    deleteOption: 'Delete'
-                }
-            },
-            osProfile: {
-                computerName: name,
-                adminUsername: username || 'azureuser',
-                adminPassword: password, // Must be provided
-            },
-            networkProfile: {
-                networkInterfaces: [{ id: nic.id, deleteOption: 'Delete' }] // Auto-delete NIC with VM
-            },
+            storageProfile: { imageReference: image || defaultImage, osDisk: { createOption: 'FromImage', managedDisk: { storageAccountType: 'StandardSSD_LRS' }, diskSizeGB: 64, deleteOption: 'Delete' } },
+            osProfile: { computerName: name, adminUsername: username || 'azureuser', adminPassword: password },
+            networkProfile: { networkInterfaces: [{ id: nic.id, deleteOption: 'Delete' }] },
             priority: spot ? 'Spot' : 'Regular',
             evictionPolicy: spot ? 'Deallocate' : undefined,
-            billingProfile: spot ? { maxPrice: -1 } : undefined // -1 means current price
+            billingProfile: spot ? { maxPrice: -1 } : undefined
         };
-
-        const vmPoller = await compute.virtualMachines.beginCreateOrUpdate(infra.rgName, name, vmParams);
-        
-        // Return immediately, let it run
+        await compute.virtualMachines.beginCreateOrUpdate(infra.rgName, name, vmParams);
         res.json({ success: true, message: 'Creating VM...', operation: 'create' });
-
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ success: false, error: e.message });
-    }
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// 3. List Resource Groups
-app.get('/api/resourceGroups', requireAzure, async (req, res) => {
-    try {
-        const { resources } = req.azure;
-        const rgs = [];
-        for await (const rg of resources.resourceGroups.list()) {
-            rgs.push({
-                name: rg.name,
-                location: rg.location,
-                tags: rg.tags
-            });
-        }
-        res.json({ success: true, resourceGroups: rgs });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-// Delete Resource Group
-app.delete('/api/resourceGroups/:name', requireAzure, async (req, res) => {
-    const { name } = req.params;
-    const { resources } = req.azure;
-    try {
-        await resources.resourceGroups.beginDelete(name);
-        res.json({ success: true, message: 'Resource Group deletion started' });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-// Nuke All Resources
 app.delete('/api/nuke', requireAzure, async (req, res) => {
-    const { resources } = req.azure;
     try {
-        if (nukeInProgress) {
-            const status = readNukeStatus();
-            return res.json({ success: true, message: 'NUKE already running.', status });
-        }
-        // Kick off background job (do not await)
-        runNuke(resources);
+        if (nukeInProgress) { return res.json({ success: true, message: 'NUKE already running.', status: readNukeStatus() }); }
+        runNuke(req.azure.resources);
         res.json({ success: true, message: 'NUKE started in background.' });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.get('/api/nuke/status', requireAzure, async (req, res) => {
-    try {
-        const status = readNukeStatus();
-        res.json({ success: true, status });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-// Start/Stop/Delete/ChangeIP
 app.post('/api/instances/:action', requireAzure, async (req, res) => {
-    const { action } = req.params; // start, stop, delete, change-ip
+    const { action } = req.params;
     const { name, resourceGroup } = req.body;
     const { compute, network } = req.azure;
-
     if (!name || !resourceGroup) return res.status(400).json({ error: 'Missing name or RG' });
-
     try {
-        let poller;
         if (action === 'start') {
-            poller = await compute.virtualMachines.beginStart(resourceGroup, name);
+            await compute.virtualMachines.beginStart(resourceGroup, name);
         } else if (action === 'stop') {
-            // Use Deallocate to stop billing
-            poller = await compute.virtualMachines.beginDeallocate(resourceGroup, name);
+            await compute.virtualMachines.beginDeallocate(resourceGroup, name);
         } else if (action === 'delete') {
-            poller = await compute.virtualMachines.beginDelete(resourceGroup, name);
-        } else if (action === 'change-ipv4') {
-            // Change IPv4
-            console.log(`[ChangeIP] Processing IPv4 swap for ${name}...`);
-
-            // 1. Get VM -> NIC
+            await compute.virtualMachines.beginDelete(resourceGroup, name);
+        } else if (action === 'change-ipv4' || action === 'change-ipv6') {
+            const isV6 = action === 'change-ipv6';
             const vm = await compute.virtualMachines.get(resourceGroup, name);
             if (!vm.networkProfile || !vm.networkProfile.networkInterfaces[0]) throw new Error('VM has no NIC');
             const nicId = vm.networkProfile.networkInterfaces[0].id;
             const nicName = nicId.split('/').pop();
             const nic = await network.networkInterfaces.get(resourceGroup, nicName);
-
-            // 2. Find v4 Config
-            const ipConfig = nic.ipConfigurations.find(c => !c.privateIPAddressVersion || c.privateIPAddressVersion === 'IPv4');
-            if (!ipConfig) throw new Error('No IPv4 config found');
-
+            const ipConfig = isV6
+                ? nic.ipConfigurations.find(c => c.privateIPAddressVersion === 'IPv6')
+                : nic.ipConfigurations.find(c => !c.privateIPAddressVersion || c.privateIPAddressVersion === 'IPv4');
+            if (!ipConfig) throw new Error(`No ${isV6 ? 'IPv6' : 'IPv4'} config found`);
             const oldPipId = ipConfig.publicIPAddress ? ipConfig.publicIPAddress.id : null;
-
-            // 3. Create NEW v4 PIP
-            const newPipName = `${name}-pip-${Date.now().toString().slice(-4)}`;
-            const pipPoller = await network.publicIPAddresses.beginCreateOrUpdate(resourceGroup, newPipName, {
-                location: vm.location,
-                publicIPAllocationMethod: 'Static',
-                sku: { name: 'Standard' }
-            });
+            const newPipName = `${name}-pip${isV6 ? '-v6' : ''}-${Date.now().toString().slice(-4)}`;
+            const pipParams = { location: vm.location, publicIPAllocationMethod: 'Static', sku: { name: 'Standard' } };
+            if (isV6) pipParams.publicIPAddressVersion = 'IPv6';
+            const pipPoller = await network.publicIPAddresses.beginCreateOrUpdate(resourceGroup, newPipName, pipParams);
             const newPip = await pipPoller.pollUntilDone();
-
-            // 4. Update NIC
             ipConfig.publicIPAddress = { id: newPip.id };
             const nicPoller = await network.networkInterfaces.beginCreateOrUpdate(resourceGroup, nicName, nic);
             await nicPoller.pollUntilDone();
-
-            // 5. Cleanup
             if (oldPipId) network.publicIPAddresses.beginDelete(resourceGroup, oldPipId.split('/').pop()).catch(e => console.error(e));
-
-            return res.json({ success: true, message: `IPv4 Changed: ${newPip.ipAddress}`, newIp: newPip.ipAddress });
-
-        } else if (action === 'change-ipv6') {
-            // Change IPv6
-            console.log(`[ChangeIP] Processing IPv6 swap for ${name}...`);
-
-            // 1. Get VM -> NIC
-            const vm = await compute.virtualMachines.get(resourceGroup, name);
-            if (!vm.networkProfile || !vm.networkProfile.networkInterfaces[0]) throw new Error('VM has no NIC');
-            const nicId = vm.networkProfile.networkInterfaces[0].id;
-            const nicName = nicId.split('/').pop();
-            const nic = await network.networkInterfaces.get(resourceGroup, nicName);
-
-            // 2. Find v6 Config
-            const ipConfig = nic.ipConfigurations.find(c => c.privateIPAddressVersion === 'IPv6');
-            if (!ipConfig) throw new Error('No IPv6 config found (Did you enable IPv6 when creating?)');
-
-            const oldPipId = ipConfig.publicIPAddress ? ipConfig.publicIPAddress.id : null;
-
-            // 3. Create NEW v6 PIP
-            const newPipName = `${name}-pip-v6-${Date.now().toString().slice(-4)}`;
-            const pipPoller = await network.publicIPAddresses.beginCreateOrUpdate(resourceGroup, newPipName, {
-                location: vm.location,
-                publicIPAllocationMethod: 'Static',
-                publicIPAddressVersion: 'IPv6',
-                sku: { name: 'Standard' }
-            });
-            const newPip = await pipPoller.pollUntilDone();
-
-            // 4. Update NIC
-            ipConfig.publicIPAddress = { id: newPip.id };
-            const nicPoller = await network.networkInterfaces.beginCreateOrUpdate(resourceGroup, nicName, nic);
-            await nicPoller.pollUntilDone();
-
-            // 5. Cleanup
-            if (oldPipId) network.publicIPAddresses.beginDelete(resourceGroup, oldPipId.split('/').pop()).catch(e => console.error(e));
-
-            return res.json({ success: true, message: `IPv6 Changed: ${newPip.ipAddress}`, newIp: newPip.ipAddress });
-
+            return res.json({ success: true, message: `${isV6 ? 'IPv6' : 'IPv4'} Changed: ${newPip.ipAddress}`, newIp: newPip.ipAddress });
         } else {
             return res.status(400).json({ error: 'Unknown action' });
         }
-        
-        // Don't await result for long-running ops (except change-ip which we waited for to return IP)
         if (!action.includes('change-ip')) {
             res.json({ success: true, message: `${action} command sent` });
         }
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ==================== Azure AI Foundry API ====================
+
+// List all AI Foundry/CognitiveServices accounts
+app.get('/api/openai/accounts', requireAzure, async (req, res) => {
+    try {
+        const { cognitive } = req.azure;
+        const accounts = [];
+        for await (const acct of cognitive.accounts.list()) {
+            accounts.push({
+                id: acct.id,
+                name: acct.name,
+                kind: acct.kind,
+                location: acct.location,
+                sku: acct.sku?.name,
+                endpoint: acct.properties?.endpoint,
+                provisioningState: acct.properties?.provisioningState,
+                resourceGroup: acct.id.split('/')[4]
+            });
+        }
+        res.json({ success: true, accounts });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Create AI Foundry resource (REST API — SDK poll is unreliable for AIServices)
+app.post('/api/openai/accounts', requireAzure, async (req, res) => {
+    const { name, location, resourceGroup } = req.body;
+    if (!name || !location) return res.status(400).json({ error: 'Missing name or location' });
+    const { resources, credential, subscriptionId } = req.azure;
+    const rgName = resourceGroup || 'AzurePanel-RG';
+    try {
+        if (!(await resources.resourceGroups.checkExistence(rgName)).body) {
+            await resources.resourceGroups.createOrUpdate(rgName, { location });
+        }
+        const token = await credential.getToken('https://management.azure.com/.default');
+        const url = `https://management.azure.com/subscriptions/${subscriptionId}/resourceGroups/${rgName}/providers/Microsoft.CognitiveServices/accounts/${name}?api-version=2024-10-01`;
+        const resp = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + token.token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                kind: 'AIServices',
+                sku: { name: 'S0' },
+                location,
+                properties: { customSubDomainName: name, publicNetworkAccess: 'Enabled' }
+            })
+        });
+        const data = await resp.json();
+        if (data.error) return res.status(500).json({ success: false, error: data.error.message });
+        // Poll until Succeeded (up to 30s)
+        for (let i = 0; i < 6; i++) {
+            await new Promise(r => setTimeout(r, 5000));
+            const check = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token.token } });
+            const acct = await check.json();
+            if (acct.properties?.provisioningState === 'Succeeded') {
+                return res.json({ success: true, message: `AI Foundry resource "${name}" created.` });
+            }
+        }
+        res.json({ success: true, message: `AI Foundry resource "${name}" creation started. Please refresh to check.` });
     } catch (e) {
-        console.error(e);
         res.status(500).json({ success: false, error: e.message });
     }
 });
 
-// Global Error Handlers (Prevent Crash)
-process.on('uncaughtException', (err) => {
-    console.error('[CRITICAL] Uncaught Exception:', err);
+// Delete AI Foundry resource (auto-delete nested projects first, cleanup empty RG)
+app.delete('/api/openai/accounts/:rg/:name', requireAzure, async (req, res) => {
+    try {
+        const { rg, name } = req.params;
+        const resClient = req.azure.resources;
+        // Get location before deletion for purge
+        let location;
+        try { const acct = await req.azure.cognitive.accounts.get(rg, name); location = acct.location; } catch (_) {}
+        // Delete nested projects first (required for Foundry resources)
+        try {
+            const parentId = `/subscriptions/${req.azure.subscriptionId}/resourceGroups/${rg}/providers/Microsoft.CognitiveServices/accounts/${name}`;
+            for await (const r of resClient.resources.listByResourceGroup(rg)) {
+                if (r.id && r.id.startsWith(parentId + '/') && r.type?.includes('/projects')) {
+                    await resClient.resources.beginDeleteById(r.id, '2025-06-01').then(p => p.pollUntilDone());
+                }
+            }
+        } catch (_) {}
+        const poller = await req.azure.cognitive.accounts.beginDelete(rg, name);
+        await poller.pollUntilDone();
+        // Purge soft-deleted resource to free quota
+        if (location) {
+            try {
+                const token = await req.azure.credential.getToken('https://management.azure.com/.default');
+                await fetch(`https://management.azure.com/subscriptions/${req.azure.subscriptionId}/providers/Microsoft.CognitiveServices/locations/${location}/resourceGroups/${rg}/deletedAccounts/${name}?api-version=2024-10-01`, {
+                    method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token.token }
+                });
+            } catch (_) {}
+        }
+        // Cleanup: delete RG if empty
+        try {
+            let hasResources = false;
+            for await (const _ of resClient.resources.listByResourceGroup(rg)) { hasResources = true; break; }
+            if (!hasResources) await resClient.resourceGroups.beginDelete(rg).then(p => p.pollUntilDone());
+        } catch (_) {}
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('[CRITICAL] Unhandled Rejection:', reason);
+
+// Get API Keys
+app.get('/api/openai/accounts/:rg/:name/keys', requireAzure, async (req, res) => {
+    try {
+        const keys = await req.azure.cognitive.accounts.listKeys(req.params.rg, req.params.name);
+        res.json({ success: true, key1: keys.key1, key2: keys.key2 });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// List deployments (models) for an AI Foundry resource
+app.get('/api/openai/accounts/:rg/:name/deployments', requireAzure, async (req, res) => {
+    try {
+        const account = await req.azure.cognitive.accounts.get(req.params.rg, req.params.name);
+        const base = (account.properties?.endpoint || '').replace(/\/+$/, '');
+        const responsesEndpoint = `${base}/openai/responses?api-version=2025-04-01-preview`;
+        const deployments = [];
+        for await (const d of req.azure.cognitive.deployments.list(req.params.rg, req.params.name)) {
+            deployments.push({
+                name: d.name,
+                model: d.properties?.model?.format + '/' + d.properties?.model?.name,
+                modelVersion: d.properties?.model?.version,
+                scaleType: d.sku?.name,
+                capacity: d.sku?.capacity,
+                provisioningState: d.properties?.provisioningState,
+                endpoint: responsesEndpoint
+            });
+        }
+        res.json({ success: true, deployments });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Deploy a model
+app.post('/api/openai/accounts/:rg/:name/deployments', requireAzure, async (req, res) => {
+    const { deploymentName, modelName, modelVersion, capacity, skuName } = req.body;
+    if (!deploymentName || !modelName) return res.status(400).json({ error: 'Missing deploymentName or modelName' });
+    try {
+        let version = modelVersion;
+        if (!version) {
+            // Auto-resolve latest version from resource location
+            const account = await req.azure.cognitive.accounts.get(req.params.rg, req.params.name);
+            const location = account.location;
+            const token = await req.azure.credential.getToken('https://management.azure.com/.default');
+            const resp = await fetch(`https://management.azure.com/subscriptions/${req.azure.subscriptionId}/providers/Microsoft.CognitiveServices/locations/${location}/models?api-version=2025-06-01`, { headers: { Authorization: 'Bearer ' + token.token } });
+            const data = await resp.json();
+            const matches = (data.value || []).filter(m => m.model?.name === modelName).sort((a, b) => (b.model?.version || '').localeCompare(a.model?.version || ''));
+            version = matches[0]?.model?.version || '';
+        }
+        const poller = await req.azure.cognitive.deployments.beginCreateOrUpdate(req.params.rg, req.params.name, deploymentName, {
+            sku: { name: skuName || 'Standard', capacity: capacity || 1 },
+            properties: {
+                model: { format: 'OpenAI', name: modelName, version }
+            }
+        });
+        await poller.pollUntilDone();
+        res.json({ success: true, message: `Model "${modelName}" deployed as "${deploymentName}".` });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Delete deployment
+app.delete('/api/openai/accounts/:rg/:name/deployments/:dname', requireAzure, async (req, res) => {
+    try {
+        const poller = await req.azure.cognitive.deployments.beginDelete(req.params.rg, req.params.name, req.params.dname);
+        await poller.pollUntilDone();
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// List quotas/usages for a location
+app.get('/api/openai/quotas/:location', requireAzure, async (req, res) => {
+    try {
+        const token = await req.azure.credential.getToken('https://management.azure.com/.default');
+        const baseUrl = `https://management.azure.com/subscriptions/${req.azure.subscriptionId}/providers/Microsoft.CognitiveServices/locations/${req.params.location}/usages?api-version=2024-10-01`;
+        let all = [], url = baseUrl;
+        while (url) {
+            const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token.token } });
+            const data = await resp.json();
+            if (data.error) return res.status(500).json({ success: false, error: data.error.message });
+            all = all.concat(data.value || []);
+            url = data.nextLink || null;
+        }
+        const quotas = all
+            .filter(q => (q.limit > 0 || q.currentValue > 0) && q.name?.localizedValue?.includes('Tokens Per Minute'))
+            .map(q => {
+                // Parse SKU and model from name like "OpenAI.GlobalStandard.gpt-4o"
+                const parts = q.name?.value?.split('.') || [];
+                const sku = parts[1] || 'Standard';
+                const model = parts.slice(2).join('.') || parts[parts.length - 1] || 'unknown';
+                return { model, sku, used: q.currentValue, limit: q.limit };
+            });
+        res.json({ success: true, quotas });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Subscription info
+app.get('/api/subscription', requireAzure, async (req, res) => {
+    try {
+        const token = await req.azure.credential.getToken('https://management.azure.com/.default');
+        const headers = { Authorization: 'Bearer ' + token.token, 'Content-Type': 'application/json' };
+        const sub = await (await fetch(`https://management.azure.com/subscriptions/${req.azure.subscriptionId}?api-version=2022-12-01`, { headers })).json();
+        const costResp = await fetch(`https://management.azure.com/subscriptions/${req.azure.subscriptionId}/providers/Microsoft.CostManagement/query?api-version=2023-11-01`, {
+            method: 'POST', headers,
+            body: JSON.stringify({ type: 'ActualCost', timeframe: 'BillingMonthToDate', dataset: { granularity: 'None', aggregation: { totalCost: { name: 'Cost', function: 'Sum' } } } })
+        });
+        const costData = await costResp.json();
+        const monthCost = costData.properties?.rows?.[0]?.[0] || 0;
+        const currency = costData.properties?.rows?.[0]?.[1] || 'USD';
+        const promo = sub.promotions?.[0];
+        const quotaId = sub.subscriptionPolicies?.quotaId || '';
+        let totalCredit = '';
+        if (quotaId.includes('Students')) totalCredit = '$100';
+        else if (quotaId.includes('FreeTrial')) totalCredit = '$200';
+        res.json({
+            success: true,
+            name: sub.displayName,
+            state: sub.state,
+            spendingLimit: sub.subscriptionPolicies?.spendingLimit,
+            totalCredit,
+            expiresAt: promo?.endDateTime || '',
+            monthCost: Math.round(monthCost * 100) / 100,
+            currency
+        });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+process.on('uncaughtException', (err) => { console.error('[CRITICAL] Uncaught Exception:', err); });
+process.on('unhandledRejection', (reason) => { console.error('[CRITICAL] Unhandled Rejection:', reason); });
 
 const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Azure Panel running at http://localhost:${port}`);
 });
-server.on('error', (err) => {
-    console.error('[CRITICAL] Server listen error:', err);
-});
+server.on('error', (err) => { console.error('[CRITICAL] Server listen error:', err); });

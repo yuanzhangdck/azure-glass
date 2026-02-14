@@ -8,115 +8,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { 
-            background: radial-gradient(circle at top left, #1e293b, #0f172a);
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            color: #f1f5f9; 
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-        }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-        }
-        .glass-input {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #f8fafc;
-            transition: all 0.3s ease;
-        }
-        .glass-input:focus {
-            background: rgba(0, 0, 0, 0.4);
-            border-color: rgba(59, 130, 246, 0.5);
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-        }
-        .btn-glass {
-            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
-            border: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(4px);
-            transition: all 0.2s;
-        }
-        .btn-glass:hover {
-            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
-            transform: translateY(-1px);
-        }
-        .btn-primary {
-            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-        }
-        .btn-primary:hover {
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-            transform: translateY(-1px);
-        }
-        .btn-danger {
-            background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
-            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-        }
-        .btn-danger:hover {
-            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
-            transform: translateY(-1px);
-        }
-        .modal-backdrop {
-            background:
-                radial-gradient(circle at 30% 20%, rgba(59,130,246,0.18), transparent 45%),
-                radial-gradient(circle at 80% 10%, rgba(14,165,233,0.15), transparent 40%),
-                rgba(2, 6, 23, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-        .modal-card {
-            position: relative;
-            background: rgba(15, 23, 42, 0.65);
-            border-radius: 1.25rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-            overflow: hidden;
-        }
-        .modal-card::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            padding: 1px;
-            border-radius: 1.25rem;
-            background: linear-gradient(135deg, rgba(59,130,246,0.5), rgba(14,165,233,0.15), rgba(255,255,255,0));
-            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-        .modal-header {
-            background: linear-gradient(90deg, rgba(59,130,246,0.2), rgba(255,255,255,0));
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-        }
-        .modal-title {
-            letter-spacing: 0.02em;
-        }
-        .modal-close {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.12);
-            transition: all 0.2s ease;
-        }
-        .modal-close:hover {
-            background: rgba(255,255,255,0.12);
-            color: #fff;
-        }
-        select option, select optgroup {
-            background-color: #0f172a;
-            color: #f1f5f9;
-        }
-        /* Toggle Switch */
+        body { background: radial-gradient(circle at top left, #1e293b, #0f172a); background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%); color: #f1f5f9; font-family: 'Inter', sans-serif; min-height: 100vh; }
+        .glass-panel { background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); }
+        .glass-input { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; transition: all 0.3s ease; }
+        .glass-input:focus { background: rgba(0, 0, 0, 0.4); border-color: rgba(59, 130, 246, 0.5); outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .btn-glass { background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); transition: all 0.2s; }
+        .btn-glass:hover { background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%); transform: translateY(-1px); }
+        .btn-primary { background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); }
+        .btn-primary:hover { box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4); transform: translateY(-1px); }
+        .btn-danger { background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3); }
+        .modal-backdrop { background: radial-gradient(circle at 30% 20%, rgba(59,130,246,0.18), transparent 45%), radial-gradient(circle at 80% 10%, rgba(14,165,233,0.15), transparent 40%), rgba(2, 6, 23, 0.7); backdrop-filter: blur(10px); }
+        .modal-card { position: relative; background: rgba(15, 23, 42, 0.65); border-radius: 1.25rem; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 20px 60px rgba(0,0,0,0.45); overflow: hidden; }
+        .modal-card::before { content: ""; position: absolute; inset: 0; padding: 1px; border-radius: 1.25rem; background: linear-gradient(135deg, rgba(59,130,246,0.5), rgba(14,165,233,0.15), rgba(255,255,255,0)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        .modal-header { background: linear-gradient(90deg, rgba(59,130,246,0.2), rgba(255,255,255,0)); border-bottom: 1px solid rgba(255,255,255,0.08); }
+        select option, select optgroup { background-color: #0f172a; color: #f1f5f9; }
         .toggle-checkbox:checked { right: 0; border-color: #3b82f6; }
         .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
         .toggle-checkbox { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
-        .toggle-label { width: 40px; height: 24px; background-color: rgba(255,255,255,0.1); border-radius: 9999px; position: relative; cursor: pointer; transition: background-color 0.2s ease-in; }
-        .toggle-label:before { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background-color: white; border-radius: 50%; transition: transform 0.2s ease-in; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .toggle-label { width: 40px; height: 24px; background-color: rgba(100,116,139,0.5); border-radius: 9999px; position: relative; cursor: pointer; transition: background-color 0.2s ease-in; display: block; }
+        .toggle-label:before { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background-color: white; border-radius: 50%; transition: transform 0.2s ease-in; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         .toggle-checkbox:checked + .toggle-label:before { transform: translateX(16px); }
     </style>
 </head>
@@ -127,208 +37,247 @@
         <div>
             <div class="flex items-center gap-3 mb-1">
                 <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.9687 4.09509L5.3418 21.5H17.9026L11.9687 4.09509Z" fill="white"/><path d="M2.5 21.5H8.75L12.0625 12.6366L15.375 21.5H21.5L12.0625 3.5L2.5 21.5Z" fill="white" fill-opacity="0.5"/></svg>
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"><path d="M11.9687 4.09509L5.3418 21.5H17.9026L11.9687 4.09509Z" fill="white"/><path d="M2.5 21.5H8.75L12.0625 12.6366L15.375 21.5H21.5L12.0625 3.5L2.5 21.5Z" fill="white" fill-opacity="0.5"/></svg>
                 </div>
                 <h1 class="text-2xl font-bold tracking-tight text-white">Azure Console</h1>
             </div>
             <p class="text-slate-400 text-xs font-medium ml-1">SUB: <span id="sub-id" class="text-blue-400 font-mono">LOADING...</span></p>
         </div>
-        
-        <div class="glass-panel rounded-xl p-1.5 flex items-center gap-2">
-            <button onclick="loadInstances(true)" class="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition" title="Force Refresh">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-            </button>
-            <button onclick="toggleSettings()" class="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition" title="Settings">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            </button>
+        <div class="flex items-center gap-3">
+            <!-- Account Switcher -->
+            <div id="account-switcher" class="glass-panel rounded-xl p-1.5"></div>
+            <div class="glass-panel rounded-xl p-1.5 flex items-center gap-2">
+                <button id="refresh-btn" onclick="doRefresh()" class="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition" title="Force Refresh">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+                <button onclick="toggleSettings()" class="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition" title="Settings">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </button>
+            </div>
         </div>
     </header>
 
-    <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
-        
-        <!-- Create Panel -->
-        <div class="glass-panel rounded-2xl p-6 xl:col-span-1 h-fit sticky top-6">
-            <h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> Deploy New
-            </h2>
-            <form id="create-form" class="space-y-5">
-                <div>
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Instance Name</label>
-                    <input type="text" class="glass-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. web-server-01">
-                </div>
-                <div>
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Region</label>
-                    <div class="flex gap-2">
-                        <select id="region-select" class="glass-input w-full rounded-lg px-3 py-2 text-sm appearance-none">
-                            <optgroup label="Asia Pacific">
-                                <option value="eastasia">East Asia (Hong Kong)</option>
-                                <option value="southeastasia">Southeast Asia (Singapore)</option>
-                                <option value="japaneast">Japan East (Tokyo)</option>
-                                <option value="japanwest">Japan West (Osaka)</option>
-                                <option value="koreacentral">Korea Central (Seoul)</option>
-                                <option value="australiaeast">Australia East (Sydney)</option>
-                                <option value="centralindia">Central India (Pune)</option>
-                            </optgroup>
-                            <optgroup label="Americas">
-                                <option value="eastus">East US (Virginia)</option>
-                                <option value="eastus2">East US 2 (Virginia)</option>
-                                <option value="westus">West US (California)</option>
-                                <option value="westus2">West US 2 (Washington)</option>
-                                <option value="westus3">West US 3 (Phoenix)</option>
-                                <option value="centralus">Central US (Iowa)</option>
-                                <option value="southcentralus">South Central US (Texas)</option>
-                                <option value="canadacentral">Canada Central (Toronto)</option>
-                                <option value="brazilsouth">Brazil South (Sao Paulo)</option>
-                            </optgroup>
-                            <optgroup label="Europe">
-                                <option value="northeurope">North Europe (Ireland)</option>
-                                <option value="westeurope">West Europe (Netherlands)</option>
-                                <option value="uksouth">UK South (London)</option>
-                                <option value="francecentral">France Central (Paris)</option>
-                                <option value="germanywestcentral">Germany West Central (Frankfurt)</option>
-                                <option value="swedencentral">Sweden Central (Gävle)</option>
-                                <option value="switzerlandnorth">Switzerland North (Zurich)</option>
-                            </optgroup>
-                            <optgroup label="Middle East & Africa">
-                                <option value="uaenorth">UAE North (Dubai)</option>
-                                <option value="southafricanorth">South Africa North (Johannesburg)</option>
-                                <option value="israelcentral">Israel Central (Tel Aviv)</option>
-                            </optgroup>
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-12">
+        <!-- Left Sidebar -->
+        <div class="xl:col-span-1 space-y-6">
+            <!-- Create Panel -->
+            <div class="glass-panel rounded-2xl p-6">
+                <h2 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> Deploy New
+                </h2>
+                <form id="create-form" class="space-y-5">
+                    <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Instance Name</label>
+                        <input type="text" class="glass-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. web-server-01"></div>
+                    <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Region</label>
+                        <div class="flex gap-2">
+                            <select id="region-select" class="glass-input w-full rounded-lg px-3 py-2 text-sm appearance-none">
+                                <optgroup label="Asia Pacific">
+                                    <option value="eastasia">East Asia (Hong Kong)</option><option value="southeastasia">Southeast Asia (Singapore)</option>
+                                    <option value="japaneast">Japan East (Tokyo)</option><option value="japanwest">Japan West (Osaka)</option>
+                                    <option value="koreacentral">Korea Central (Seoul)</option><option value="australiaeast">Australia East (Sydney)</option>
+                                    <option value="centralindia">Central India (Pune)</option>
+                                </optgroup>
+                                <optgroup label="Americas">
+                                    <option value="eastus">East US (Virginia)</option><option value="eastus2">East US 2</option>
+                                    <option value="westus">West US (California)</option><option value="westus2">West US 2</option>
+                                    <option value="westus3">West US 3 (Phoenix)</option><option value="centralus">Central US (Iowa)</option>
+                                    <option value="southcentralus">South Central US (Texas)</option><option value="canadacentral">Canada Central</option>
+                                    <option value="brazilsouth">Brazil South</option>
+                                </optgroup>
+                                <optgroup label="Europe">
+                                    <option value="northeurope">North Europe (Ireland)</option><option value="westeurope">West Europe (Netherlands)</option>
+                                    <option value="uksouth">UK South (London)</option><option value="francecentral">France Central (Paris)</option>
+                                    <option value="germanywestcentral">Germany West Central</option><option value="swedencentral">Sweden Central</option>
+                                    <option value="switzerlandnorth">Switzerland North</option>
+                                </optgroup>
+                                <optgroup label="Middle East & Africa">
+                                    <option value="uaenorth">UAE North (Dubai)</option><option value="southafricanorth">South Africa North</option>
+                                    <option value="israelcentral">Israel Central</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                    <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Size</label>
+                        <select id="size-select" class="glass-input w-full rounded-lg px-3 py-2 text-sm appearance-none">
+                            <option value="standard_b1s">standard_b1s (1 vCPU / 1 GiB) - Free Tier</option>
+                            <option value="standard_b2pts_v2">standard_b2pts_v2 (2 vCPU / 1 GiB) - ARM</option>
+                            <option value="standard_b2ats_v2">standard_b2ats_v2 (2 vCPU / 1 GiB) - AMD</option>
                         </select>
-                        <button type="button" id="scan-skus-btn" class="btn-glass px-3 py-2 rounded-lg text-sm font-semibold text-white transition transform active:scale-95 flex-shrink-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m0 0h-3"></path></svg>
-                        </button>
                     </div>
-                </div>
-                <div>
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Size</label>
-                    <select id="size-select" class="glass-input w-full rounded-lg px-3 py-2 text-sm appearance-none">
-                        <option value="standard_b1s">standard_b1s (1 vCPU / 1 GiB) - Free Tier (x86)</option>
-                        <option value="standard_b2pts_v2">standard_b2pts_v2 (2 vCPU / 1 GiB) - ARM</option>
-                        <option value="standard_b2ats_v2">standard_b2ats_v2 (2 vCPU / 1 GiB) - AMD</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">OS Image</label>
-                    <select id="image-select" class="glass-input w-full rounded-lg px-3 py-2 text-sm appearance-none">
-                        <option value="debian12" selected>Debian 12 (Bookworm)</option>
-                        <option value="ubuntu22">Ubuntu 22.04 LTS</option>
-                        <option value="ubuntu20">Ubuntu 20.04 LTS</option>
-                    </select>
-                </div>
-                
-                <div class="flex items-end pb-2 justify-between">
-                     <!-- IPv6 Toggle -->
-                     <div class="flex items-center gap-3">
-                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Public IPv6</span>
-                        <div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" name="toggle" id="ipv6-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                            <label for="ipv6-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">OS Image</label>
+                        <select id="image-select" class="glass-input w-full rounded-lg px-3 py-2 text-sm appearance-none">
+                            <option value="debian12" selected>Debian 12</option><option value="ubuntu22">Ubuntu 22.04 LTS</option><option value="ubuntu20">Ubuntu 20.04 LTS</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end pb-2 justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Public IPv6</span>
+                            <div class="relative inline-block w-10 align-middle select-none">
+                                <input type="checkbox" id="ipv6-toggle" class="toggle-checkbox"/>
+                                <label for="ipv6-toggle" class="toggle-label"></label>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Auth Config -->
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div>
-                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Username</label>
-                        <input type="text" id="vm-user" class="glass-input w-full rounded-lg px-3 py-2 text-sm" value="azureuser" placeholder="e.g. admin">
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Username</label>
+                            <input type="text" id="vm-user" class="glass-input w-full rounded-lg px-3 py-2 text-sm" value="azureuser"></div>
+                        <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Password</label>
+                            <div class="relative"><input type="text" id="vm-pass" class="glass-input w-full rounded-lg px-3 py-2 text-sm pr-8 font-mono" placeholder="Min 12 chars">
+                                <button type="button" onclick="genPass()" class="absolute right-2 top-2 text-slate-400 hover:text-white">🎲</button></div></div>
                     </div>
-                    <div>
-                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Password</label>
-                        <div class="relative">
-                            <input type="text" id="vm-pass" class="glass-input w-full rounded-lg px-3 py-2 text-sm pr-8 font-mono" placeholder="Min 12 chars">
-                            <button type="button" onclick="genPass()" class="absolute right-2 top-2 text-slate-400 hover:text-white" title="Generate">🎲</button>
-                        </div>
-                    </div>
-                </div>
+                    <button type="button" class="btn-primary w-full rounded-lg py-2.5 text-sm font-semibold text-white transition transform active:scale-95">Deploy Instance</button>
+                </form>
+            </div>
 
-                <button type="button" class="btn-primary w-full rounded-lg py-2.5 text-sm font-semibold text-white transition transform active:scale-95">
-                    Deploy Instance
-                </button>
-            </form>
+            <!-- Account Panel -->
+            <div class="glass-panel rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-semibold text-white">Accounts</h2>
+                    <button onclick="showAddAccount()" class="px-3 py-1.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 text-xs font-bold transition shadow-sm shadow-blue-500/20">+ Add</button>
+                </div>
+                <div id="account-list"></div>
+            </div>
         </div>
 
-        <!-- List -->
+        <!-- Right Content -->
         <div class="xl:col-span-3 space-y-8">
-            <!-- Instances Panel -->
-            <div class="glass-panel rounded-2xl overflow-hidden min-h-[400px]">
-                <div class="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-white/5">
+            <div class="glass-panel rounded-2xl overflow-hidden border-0">
+                <div class="px-6 py-5 flex justify-between items-center">
                     <h2 class="text-lg font-semibold text-white">Instances</h2>
                     <span id="instance-count" class="bg-white/10 text-white text-xs font-bold px-2 py-1 rounded-md border border-white/5">0</span>
                 </div>
-                <div class="p-12 text-center text-slate-500 italic" id="instance-container">
-                    Connect Azure Credentials to load resources...
+                <div class="p-12 text-center text-slate-500 italic">Select an account to load resources...</div>
+            </div>
+            <!-- AI Foundry Panel -->
+            <div class="glass-panel rounded-2xl overflow-hidden border-0">
+                <div class="px-6 py-5 flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 24 24"><path d="M22.282 9.821a5.985 5.985 0 00-.516-4.91 6.046 6.046 0 00-6.51-2.9A6.065 6.065 0 0011.05.5a6.04 6.04 0 00-5.79 4.214 5.99 5.99 0 00-3.99 2.9 6.05 6.05 0 00.74 7.097 5.98 5.98 0 00.516 4.911 6.05 6.05 0 006.51 2.9A6.06 6.06 0 0013.95 23.5a6.04 6.04 0 005.79-4.214 5.99 5.99 0 003.99-2.9 6.05 6.05 0 00-.74-7.097zM13.95 21.784a4.53 4.53 0 01-2.913-1.055l.145-.081 4.84-2.796a.79.79 0 00.397-.683v-6.823l2.046 1.181a.07.07 0 01.039.054v5.652a4.55 4.55 0 01-4.554 4.551zM3.804 17.607a4.52 4.52 0 01-.54-3.043l.144.083 4.84 2.796a.78.78 0 00.794 0l5.91-3.413v2.364a.07.07 0 01-.029.06l-4.895 2.826a4.55 4.55 0 01-6.224-1.673zM2.52 7.93a4.53 4.53 0 012.374-1.988v5.755a.78.78 0 00.397.682l5.91 3.413-2.047 1.182a.07.07 0 01-.067.006L4.19 14.153A4.55 4.55 0 012.52 7.93zm16.97 3.958l-5.91-3.413 2.046-1.182a.07.07 0 01.067-.006l4.897 2.827a4.55 4.55 0 01-.74 8.2v-5.744a.78.78 0 00-.36-.682zm2.037-3.06l-.144-.083-4.84-2.796a.78.78 0 00-.794 0l-5.91 3.413V7.003a.07.07 0 01.029-.06l4.895-2.826a4.55 4.55 0 016.764 4.711zM8.678 12.952l-2.046-1.181a.07.07 0 01-.039-.054V6.065a4.55 4.55 0 017.467-3.496l-.145.081-4.84 2.796a.79.79 0 00-.397.683v6.823zm1.112-2.396l2.634-1.521 2.634 1.521v3.043l-2.634 1.521-2.634-1.521v-3.043z"/></svg>
+                        AI Foundry
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <button id="oai-refresh-btn" onclick="doRefreshOAI()" class="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition" title="Refresh">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        </button>
+                        <button onclick="showQuotas()" class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 text-xs font-bold transition">Quotas</button>
+                        <button onclick="showCreateOpenAI()" class="px-3 py-1.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 text-xs font-bold transition shadow-sm shadow-blue-500/20">+ Create</button>
+                    </div>
+                </div>
+                <div id="openai-list" class="px-6 pb-6">
+                    <div class="text-center text-slate-500 py-6 text-sm italic">Select an account to load AI Foundry resources...</div>
                 </div>
             </div>
 
-            <!-- Cleanup Panel (Redesigned) -->
-            <div class="glass-panel rounded-2xl p-1 mt-6">
-                <div class="rounded-xl bg-white/5 p-5 border border-white/5 hover:border-red-500/30 transition-colors duration-500 group">
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div class="flex items-center gap-4 w-full">
-                            <div class="p-3 rounded-xl bg-red-500/10 text-red-400 ring-1 ring-red-500/20 group-hover:bg-red-500/20 group-hover:ring-red-500/40 transition-all">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </div>
-                            <div class="text-left">
-                                <h3 class="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors">Reset Subscription</h3>
-                                <p class="text-xs text-slate-500 group-hover:text-slate-400 transition-colors mt-0.5">Delete all resource groups and stop billing.</p>
-                            </div>
-                        </div>
-                        <button onclick="nukeAll()" class="px-5 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/20 hover:border-red-500 hover:shadow-lg hover:shadow-red-600/20 transition-all duration-300 w-full sm:w-auto flex-shrink-0">
-                            <span class="text-xs font-bold uppercase tracking-wide">Delete All</span>
-                        </button>
+            <!-- Create AI Foundry Modal -->
+            <div id="openai-create-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center opacity-0 transition-all duration-300 modal-backdrop">
+                <div class="modal-card w-full max-w-lg transform scale-95 transition-all duration-300" id="openai-create-content">
+                    <div class="modal-header p-5 flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-white">Create AI Foundry Resource</h3>
+                        <button onclick="toggleOpenAICreate(false)" class="text-slate-300 p-1.5 rounded-lg hover:bg-white/10"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
                     </div>
-                    
-                    <!-- Nuke Status (Hidden by default) -->
-                    <div id="nuke-status" class="mt-4 pt-4 border-t border-white/5 hidden">
-                        <div class="flex items-center justify-between text-[10px] uppercase tracking-wider text-red-400 mb-2">
-                            <span>Cleaning Progress</span>
-                            <span id="nuke-count" class="font-bold">Processing...</span>
+                    <div class="p-6 space-y-4">
+                        <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Resource Name</label>
+                            <input type="text" id="oai-name" class="glass-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. my-ai-foundry-01"></div>
+                        <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Location</label>
+                            <select id="oai-location" class="glass-input w-full rounded-lg px-3 py-2 text-sm appearance-none">
+                                <option value="eastus">East US</option><option value="eastus2">East US 2</option>
+                                <option value="westus">West US</option><option value="westus3">West US 3</option>
+                                <option value="southcentralus">South Central US</option><option value="northcentralus">North Central US</option>
+                                <option value="westeurope">West Europe</option><option value="northeurope">North Europe</option>
+                                <option value="uksouth">UK South</option><option value="francecentral">France Central</option>
+                                <option value="swedencentral">Sweden Central</option><option value="switzerlandnorth">Switzerland North</option>
+                                <option value="japaneast">Japan East</option><option value="australiaeast">Australia East</option>
+                                <option value="canadaeast">Canada East</option><option value="koreacentral">Korea Central</option>
+                            </select></div>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button onclick="toggleOpenAICreate(false)" class="btn-glass px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-200">Cancel</button>
+                            <button onclick="createOpenAI()" class="btn-primary px-6 py-2.5 rounded-xl text-sm font-bold text-white">Create</button>
                         </div>
-                        <div class="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
-                            <div id="nuke-bar" class="h-full w-1/3 bg-red-500 animate-pulse"></div>
-                        </div>
-                        <div id="nuke-last" class="text-[10px] text-slate-500 mt-2 font-mono">Initializing...</div>
                     </div>
                 </div>
             </div>
+
+            <!-- Deploy Model Modal -->
+
+
+            <!-- Subscription Info -->
+            <div id="subscription-info" class="glass-panel rounded-2xl">
+                <div class="px-6 py-3">
+                    <div id="subscription-details">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-1"><span class="text-[11px] text-white">Type</span><span class="text-[11px] text-slate-600 ml-1">—</span></div>
+                        <div class="flex items-center gap-1"><span class="text-[11px] text-white">Credit</span><span class="text-[11px] text-slate-600 ml-1">—</span></div>
+                        <div class="flex items-center gap-1"><span class="text-[11px] text-white">Expires</span><span class="text-[11px] text-slate-600 ml-1">—</span></div>
+                        <div class="flex items-center gap-1"><span class="text-[11px] text-white">This Month</span><span class="text-[11px] text-slate-600 ml-1">—</span></div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- Cleanup -->
+            <div class="glass-panel rounded-2xl">
+                <div class="px-6 py-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] text-white font-bold">Reset All Resources</span>
+                            <span class="text-[11px] text-slate-400">Delete all created resource groups and resources.</span>
+                        </div>
+                        <button onclick="nukeAll()" class="px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/20 hover:border-red-500 transition-all duration-300 flex-shrink-0 text-[10px] font-bold">Delete All</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- Generic Message Modal -->
+    <!-- Message Modal -->
     <div id="message-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center opacity-0 transition-all duration-300 modal-backdrop">
-        <div class="modal-card w-full max-w-md transform scale-95 transition-all duration-300" id="message-content">
-            <div class="modal-header p-5 flex justify-between items-center">
-                <h3 id="msg-title" class="modal-title text-lg font-bold text-white">Notification</h3>
-                <button onclick="closeMessage()" class="modal-close text-slate-300 p-1.5 rounded-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <div class="p-6">
-                <div id="msg-body" class="text-slate-300 text-sm leading-relaxed mb-6"></div>
-                <div class="flex justify-end gap-2">
-                    <button onclick="closeMessage()" class="btn-primary px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95">Got it</button>
-                </div>
-            </div>
+        <div class="modal-card w-full max-w-4xl transform scale-95 transition-all duration-300" id="message-content">
+            <div class="modal-header p-5 flex justify-between items-center"><h3 id="msg-title" class="text-lg font-bold text-white">Notification</h3>
+                <button onclick="closeMessage()" class="text-slate-300 p-1.5 rounded-lg hover:bg-white/10"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+            <div class="p-6"><div id="msg-body" class="text-slate-300 text-sm leading-relaxed mb-6"></div>
+                <div class="flex justify-end"><button onclick="closeMessage()" class="btn-primary px-6 py-2.5 rounded-xl text-sm font-bold text-white">Got it</button></div></div>
         </div>
     </div>
 
     <!-- Confirm Modal -->
     <div id="confirm-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center opacity-0 transition-all duration-300 modal-backdrop">
         <div class="modal-card w-full max-w-md transform scale-95 transition-all duration-300" id="confirm-content">
-            <div class="modal-header p-5 flex justify-between items-center">
-                <h3 id="confirm-title" class="modal-title text-lg font-bold text-white">Confirm</h3>
-                <button onclick="closeConfirm(false)" class="modal-close text-slate-300 p-1.5 rounded-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <div class="p-6">
-                <div id="confirm-body" class="text-slate-300 text-sm leading-relaxed mb-6"></div>
+            <div class="modal-header p-5 flex justify-between items-center"><h3 class="text-lg font-bold text-white">Confirm</h3>
+                <button onclick="closeConfirm(false)" class="text-slate-300 p-1.5 rounded-lg hover:bg-white/10"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+            <div class="p-6"><div id="confirm-body" class="text-slate-300 text-sm leading-relaxed mb-6 whitespace-pre-line"></div>
                 <div class="flex justify-end gap-2">
-                    <button id="confirm-cancel" onclick="closeConfirm(false)" class="btn-glass px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-200">Cancel</button>
-                    <button id="confirm-ok" onclick="closeConfirm(true)" class="btn-primary px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg transition-all active:scale-95">Confirm</button>
+                    <button onclick="closeConfirm(false)" class="btn-glass px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-200">Cancel</button>
+                    <button onclick="closeConfirm(true)" class="btn-primary px-6 py-2.5 rounded-xl text-sm font-bold text-white">Confirm</button></div></div>
+        </div>
+    </div>
+
+    <!-- Account Add/Edit Modal -->
+    <div id="account-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center opacity-0 transition-all duration-300 modal-backdrop">
+        <div class="modal-card w-full max-w-lg transform scale-95 transition-all duration-300" id="account-modal-content">
+            <div class="modal-header p-5 flex justify-between items-center">
+                <h3 id="acc-modal-title" class="text-lg font-bold text-white">Add Account</h3>
+                <button onclick="toggleAccountModal(false)" class="text-slate-300 p-1.5 rounded-lg hover:bg-white/10"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="acc-id">
+                <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Account Name</label>
+                    <input type="text" id="acc-name" class="glass-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. My Azure #1"></div>
+                <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Remark (Optional)</label>
+                    <input type="text" id="acc-remark" class="glass-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. Free trial account"></div>
+                <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Azure Credentials (JSON)</label>
+                    <div class="mb-2 p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[10px] text-blue-200 font-mono break-all select-all leading-relaxed">az ad sp create-for-rbac --name "AzurePanel" --role Contributor --scopes /subscriptions/{SUB_ID} --sdk-auth</div>
+                    <textarea id="acc-key" class="glass-input w-full h-28 rounded-lg px-3 py-2 text-xs font-mono" placeholder='{"clientId":"...","clientSecret":"...","tenantId":"...","subscriptionId":"..."}'></textarea>
+                    <p class="text-[10px] text-slate-500 mt-1">Edit mode: leave empty to keep existing credentials.</p></div>
+                <div><label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">SOCKS5 Proxy (Optional)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="acc-socks5" class="glass-input w-full rounded-lg px-3 py-2 text-sm font-mono" placeholder="socks5://user:pass@host:port">
+                        <button type="button" onclick="testSocks5()" class="btn-glass px-3 py-2 rounded-lg text-xs font-bold text-white shrink-0">Test</button>
+                    </div>
+                    <p id="socks5-result" class="text-[10px] text-slate-500 mt-1">Azure API requests will go through this proxy to avoid IP risk.</p></div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button onclick="toggleAccountModal(false)" class="btn-glass px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-200">Cancel</button>
+                    <button onclick="saveAccount()" class="btn-primary px-6 py-2.5 rounded-xl text-sm font-bold text-white">Save</button>
                 </div>
             </div>
         </div>
@@ -336,57 +285,34 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300 modal-backdrop">
-        <div class="modal-card w-full max-w-2xl transform scale-95 transition-transform duration-300" id="settings-content">
-            <div class="modal-header p-6 flex justify-between items-center">
-                <h3 class="modal-title text-lg font-bold text-white">System Settings</h3>
-                <button onclick="toggleSettings()" class="modal-close text-slate-300 p-1.5 rounded-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
+        <div class="modal-card w-full max-w-md transform scale-95 transition-transform duration-300" id="settings-content">
+            <div class="modal-header p-6 flex justify-between items-center"><h3 class="text-lg font-bold text-white">Settings</h3>
+                <button onclick="toggleSettings()" class="text-slate-300 p-1.5 rounded-lg hover:bg-white/10"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
             <div class="p-6">
-                <h4 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Azure Credentials</h4>
-                
-                <div class="mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 font-mono break-all select-all">
-                    az ad sp create-for-rbac --name "AzurePanel" --role Contributor --scopes /subscriptions/{SUB_ID} --sdk-auth
-                </div>
-
-                <textarea id="azure-key" class="glass-input w-full h-32 rounded-lg px-4 py-3 text-xs font-mono mb-4" placeholder='Paste JSON here...'></textarea>
-                <div class="flex justify-end">
-                    <button onclick="saveKey()" class="btn-primary px-6 py-2 rounded-lg text-sm font-bold text-white">Save & Connect</button>
-                </div>
+                <h4 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Change Panel Password</h4>
+                <input type="password" id="new-password" class="glass-input w-full rounded-lg px-4 py-3 text-sm mb-4" placeholder="New password (min 5 chars)">
+                <div class="flex justify-end"><button onclick="savePassword()" class="btn-primary px-6 py-2 rounded-lg text-sm font-bold text-white">Save Password</button></div>
             </div>
         </div>
     </div>
 
     <!-- Toast -->
     <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-xl text-white px-6 py-3 rounded-full shadow-2xl transition-all duration-300 transform -translate-y-24 opacity-0 z-50 border border-white/10 flex items-center gap-3 min-w-[300px] justify-center">
-        <div id="toast-icon">✨</div>
-        <span id="toast-msg" class="text-sm font-medium">Notification</span>
+        <div id="toast-icon">✨</div><span id="toast-msg" class="text-sm font-medium">Notification</span>
     </div>
 
-    <!-- Force Cache Update -->
-    <script src="app.js?v=force_update_11"></script>
+    <script src="app.js?v=multi_account_1"></script>
     <script>
         function genPass() {
             const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
-            let pass = "";
-            for(let i=0; i<14; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-            // Ensure complexity requirements
-            pass += "Aa1!"; 
-            document.getElementById('vm-pass').value = pass;
+            let pass = ""; for(let i=0;i<14;i++) pass += chars.charAt(Math.floor(Math.random()*chars.length));
+            pass += "Aa1!"; document.getElementById('vm-pass').value = pass;
         }
-
-        // Inline simple toggle to avoid load order issues
         function toggleSettings() {
             const modal = document.getElementById('settings-modal');
             const content = document.getElementById('settings-content');
-            if (modal.classList.contains('hidden')) {
-                modal.classList.remove('hidden');
-                setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
-            } else {
-                modal.classList.add('opacity-0'); content.classList.remove('scale-100'); content.classList.add('scale-95');
-                setTimeout(() => { modal.classList.add('hidden'); }, 300);
-            }
+            if (modal.classList.contains('hidden')) { toggleModal('settings-modal', 'settings-content', true); }
+            else { toggleModal('settings-modal', 'settings-content', false); }
         }
     </script>
 </body>
