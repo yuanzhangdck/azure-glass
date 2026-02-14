@@ -1,64 +1,79 @@
 #!/bin/bash
-# Azure Glass Panel - One-Click Installer
-# Usage: bash <(curl -sL https://raw.githubusercontent.com/yuanzhangdck/azure-glass/main/install.sh)
+# Azure Glass Panel - 一键安装脚本
+# 用法: bash <(curl -sL https://raw.githubusercontent.com/yuanzhangdck/azure-glass/main/install.sh)
 
 set -e
 
-# Colors
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
+RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}💎 Azure Glass Panel Installer${NC}"
+echo -e "${BLUE}💎 Azure Glass Panel 安装程序${NC}"
 
-# 1. Install Node.js (if missing)
+# 检测包管理器
+if [ -x "$(command -v apt-get)" ]; then
+    PKG="apt"
+elif [ -x "$(command -v yum)" ]; then
+    PKG="yum"
+else
+    echo -e "${RED}❌ 不支持的系统，需要 apt 或 yum${NC}"; exit 1
+fi
+
+# 1. 安装 Node.js
 if ! command -v node &> /dev/null; then
-    echo "📦 Installing Node.js..."
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    if [ -x "$(command -v apt-get)" ]; then apt-get install -y nodejs; fi
-    if [ -x "$(command -v yum)" ]; then yum install -y nodejs; fi
+    echo "📦 安装 Node.js 20..."
+    if [ "$PKG" = "apt" ]; then
+        apt-get update -y && apt-get install -y curl
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt-get install -y nodejs
+    else
+        yum install -y curl
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+        yum install -y nodejs
+    fi
 fi
 
-# 2. Install Git & PM2
+# 2. 安装 Git
 if ! command -v git &> /dev/null; then
-    echo "🔧 Installing Git..."
-    if [ -x "$(command -v apt-get)" ]; then apt-get update && apt-get install -y git; fi
-    if [ -x "$(command -v yum)" ]; then yum install -y git; fi
+    echo "🔧 安装 Git..."
+    $PKG install -y git
 fi
 
+# 3. 安装 PM2
 if ! command -v pm2 &> /dev/null; then
-    echo "🚀 Installing PM2..."
+    echo "🚀 安装 PM2..."
     npm install -g pm2
 fi
 
-# 3. Clone/Update Repo
+# 4. 拉取/更新代码
 WORK_DIR="$HOME/azure-glass"
 if [ -d "$WORK_DIR" ]; then
-    echo "📂 Updating existing repo..."
-    cd "$WORK_DIR"
-    git pull
+    echo "📂 更新代码..."
+    cd "$WORK_DIR" && git pull
 else
-    echo "📂 Cloning repository..."
+    echo "📂 拉取代码..."
     git clone https://github.com/yuanzhangdck/azure-glass.git "$WORK_DIR"
     cd "$WORK_DIR"
 fi
 
-# 4. Install Dependencies
-echo "📥 Installing NPM packages..."
+# 5. 安装依赖
+echo "📥 安装依赖..."
 npm install --production
 
-# 5. Start with PM2
-echo "🔥 Starting Server..."
+# 6. 启动服务
+echo "🔥 启动服务..."
 pm2 delete azure-glass 2>/dev/null || true
 PORT=3000 pm2 start server.js --name azure-glass
 
-# 6. Auto Startup
-pm2 startup | bash 2>/dev/null || true
-pm2 save
+# 7. 开机自启
+pm2 startup 2>/dev/null | tail -1 | bash 2>/dev/null || true
+pm2 save 2>/dev/null || true
 
-# 7. Info
-IP=$(curl -s ifconfig.me || echo "YOUR_IP")
+# 8. 完成
+IP=$(curl -s ifconfig.me 2>/dev/null || echo "YOUR_IP")
 echo ""
-echo -e "${GREEN}✅ Deployed Successfully!${NC}"
-echo -e "👉 URL: http://$IP:3000"
-echo -e "🔑 Password: password"
+echo -e "${GREEN}✅ 安装完成！${NC}"
+echo -e "👉 访问地址: http://$IP:3000"
+echo -e "🔑 默认密码: password"
+echo -e "⚠️  请登录后立即修改密码"
